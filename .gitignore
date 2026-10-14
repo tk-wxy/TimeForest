@@ -44,3 +44,6 @@ pnpm-debug.log*
 # ===== 操作系统 =====
 Thumbs.db
 Desktop.ini
+
+# ===== 旧后端 git 仓库备份（含早期提交，保留但不纳入新仓库）=====
+/_backend_git_backup/
