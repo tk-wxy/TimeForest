@@ -1,0 +1,46 @@
+# ===== 环境变量 / 密钥（绝不提交）=====
+.env
+.env.local
+*.env
+!.env.example
+
+# ===== Java / Maven（后端 ai-agent-core）=====
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+*.war
+*.log
+hs_err_pid*
+
+# 保留 ONNX 模型（项目运行必需）—— 不忽略
+# 若模型过大不想入库，可手动取消下面两行注释
+# ai-agent-core/src/main/resources/onnx/*.onnx
+
+# ===== Node / Vue（前端 Gris）=====
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# ===== IDE =====
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+
+# ===== 日志 / 临时文件 =====
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== 操作系统 =====
+Thumbs.db
+Desktop.ini

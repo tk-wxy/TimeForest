@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat UI</title>
+    <script>
+      (function silenceTailwindCdnProductionWarning() {
+        const originalWarn = console.warn;
+        console.warn = function (...args) {
+          const firstArg = args[0];
+          if (
+            typeof firstArg === "string" &&
+            firstArg.includes("cdn.tailwindcss.com should not be used in production")
+          ) {
+            return;
+          }
+          originalWarn.apply(console, args);
+        };
+      })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+
+      .scroll-smooth-lite {
+        scroll-behavior: smooth;
+      }
+
+      .markdown-content > *:first-child {
+        margin-top: 0;
+      }
+
+      .markdown-content > *:last-child {
+        margin-bottom: 0;
+      }
+
+      .markdown-content p,
+      .markdown-content ul,
+      .markdown-content ol,
+      .markdown-content blockquote,
+      .markdown-content pre,
+      .markdown-content h1,
+      .markdown-content h2,
+      .markdown-content h3,
+      .markdown-content h4,
+      .markdown-content h5,
+      .markdown-content h6 {
+        margin: 0.7em 0;
+      }
+
+      .markdown-content ul,
+      .markdown-content ol {
+        padding-left: 1.35em;
+      }
+
+      .markdown-content li + li {
+        margin-top: 0.35em;
+      }
+
+      .markdown-content blockquote {
+        border-left: 3px solid #d1d5db;
+        padding-left: 0.85em;
+        color: #4b5563;
+      }
+
+      .markdown-content code:not(pre code) {
+        background-color: #e5e7eb;
+        color: #111827;
+        padding: 0.15em 0.4em;
+        border-radius: 0.4em;
+        font-size: 0.9em;
+      }
+
+      .markdown-content pre {
+        background: #0d1117;
+        border-radius: 0.8em;
+        padding: 0.9em 1em;
+        overflow-x: auto;
+      }
+
+      .markdown-content pre code {
+        background: transparent;
+        padding: 0;
+        border-radius: 0;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 text-gray-800 antialiased">
+    <div class="h-full p-3 sm:p-5">
+      <div
+        class="mx-auto h-full max-w-5xl rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col"
+      >
+        <header class="border-b border-gray-100 px-5 py-4 bg-white/90 backdrop-blur">
+          <div class="flex items-center gap-3">
+            <div class="h-9 w-9 rounded-xl bg-blue-600 text-white grid place-items-center">
+              <i class="fa-solid fa-sparkles text-sm"></i>
+            </div>
+            <div>
+              <h1 class="text-sm sm:text-base font-semibold">AI Chat Assistant</h1>
+              <p class="text-xs text-gray-500">简洁、快速、类似 ChatGPT 的聊天体验</p>
+            </div>
+          </div>
+        </header>
+
+        <main
+          id="chatContainer"
+          class="flex-1 overflow-y-auto scroll-smooth-lite px-4 sm:px-6 py-5 bg-gray-50"
+          aria-live="polite"
+        >
+          <div id="messageList" class="mx-auto max-w-4xl space-y-4">
+            <div class="flex items-start gap-2 justify-start">
+              <div
+                class="max-w-[85%] sm:max-w-[75%] rounded-2xl bg-white shadow-sm border border-gray-100 px-4 py-3 text-sm leading-6 text-gray-700"
+              >
+                你好，我是 AI 助手。可以开始提问了。
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <footer class="border-t border-gray-100 bg-white px-4 sm:px-6 py-4">
+          <div class="mx-auto max-w-4xl">
+            <div class="flex items-end gap-3">
+              <textarea
+                id="messageInput"
+                rows="1"
+                placeholder="输入消息，按 Enter 发送，Shift + Enter 换行"
+                class="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 max-h-40"
+              ></textarea>
+              <button
+                id="sendButton"
+                class="h-11 shrink-0 rounded-xl bg-blue-600 px-5 text-sm font-medium text-white transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <i class="fa-solid fa-paper-plane mr-1"></i>发送
+              </button>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <script>
+      const chatContainer = document.getElementById("chatContainer");
+      const messageList = document.getElementById("messageList");
+      const messageInput = document.getElementById("messageInput");
+      const sendButton = document.getElementById("sendButton");
+
+      let loadingNode = null;
+      let sending = false;
+
+      function scrollToBottom() {
+        requestAnimationFrame(() => {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
+      }
+
+      function resizeInput() {
+        messageInput.style.height = "auto";
+        messageInput.style.height = `${Math.min(messageInput.scrollHeight, 160)}px`;
+      }
+
+      function createBubble(role, text, isHtml = false) {
+        const row = document.createElement("div");
+        row.className = `flex items-start gap-2 ${role === "user" ? "justify-end" : "justify-start"}`;
+
+        const bubble = document.createElement("div");
+        bubble.className =
+          role === "user"
+            ? "max-w-[85%] sm:max-w-[75%] rounded-2xl bg-blue-600 px-4 py-3 text-sm leading-6 text-white break-words shadow-sm"
+            : "max-w-[85%] sm:max-w-[75%] rounded-2xl bg-white border border-gray-100 px-4 py-3 text-sm leading-6 text-gray-700 break-words shadow-sm";
+
+        if (isHtml) {
+          bubble.classList.add("markdown-content");
+          bubble.innerHTML = text;
+        } else {
+          bubble.textContent = text;
+        }
+
+        row.appendChild(bubble);
+        messageList.appendChild(row);
+        scrollToBottom();
+        return row;
+      }
+
+      function createStreamingAiBubble() {
+        const row = document.createElement("div");
+        row.className = "flex items-start gap-2 justify-start";
+
+        const bubble = document.createElement("div");
+        bubble.className =
+          "max-w-[85%] sm:max-w-[75%] rounded-2xl bg-white border border-gray-100 px-4 py-3 text-sm leading-6 text-gray-700 break-words shadow-sm markdown-content";
+
+        row.appendChild(bubble);
+        messageList.appendChild(row);
+        scrollToBottom();
+
+        return { row, bubble };
+      }
+
+      function renderMarkdown(text) {
+        return marked.parse(text, {
+          gfm: true,
+          breaks: true
+        });
+      }
+
+      function parseSseEvent(eventBlock) {
+        const dataLines = eventBlock
+          .split("\n")
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).replace(/^ /, ""));
+
+        if (!dataLines.length) {
+          return "";
+        }
+
+        return dataLines.join("\n");
+      }
+
+      function showThinking() {
+        loadingNode = createBubble(
+          "ai",
+          `
+            <div class="flex items-center gap-2 text-gray-500">
+              <span class="inline-flex gap-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.24s]"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.12s]"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce"></span>
+              </span>
+              <span>AI 正在思考...</span>
+            </div>
+          `,
+          true
+        );
+      }
+
+      function hideThinking() {
+        if (loadingNode) {
+          loadingNode.remove();
+          loadingNode = null;
+        }
+      }
+
+      async function sendMessage() {
+        const content = messageInput.value.trim();
+        if (!content || sending) {
+          return;
+        }
+
+        sending = true;
+        sendButton.disabled = true;
+
+        createBubble("user", content);
+        messageInput.value = "";
+        resizeInput();
+        showThinking();
+
+        try {
+          const url = `http://localhost:8080/ask/stream?q=${encodeURIComponent(content)}`;
+          const response = await fetch(url, { method: "GET" });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          if (!response.body) {
+            throw new Error("ReadableStream 不可用");
+          }
+
+          hideThinking();
+
+          const aiStream = createStreamingAiBubble();
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder("utf-8");
+          let fullMessage = "";
+          let pendingChunk = "";
+          let streamClosedByServer = false;
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) {
+              break;
+            }
+
+            pendingChunk += decoder.decode(value, { stream: true });
+            const normalizedBuffer = pendingChunk.replace(/\r\n/g, "\n");
+            const events = normalizedBuffer.split("\n\n");
+            pendingChunk = events.pop() || "";
+
+            for (const eventBlock of events) {
+              const payload = parseSseEvent(eventBlock);
+              if (!payload) {
+                continue;
+              }
+
+              if (payload === "[DONE]") {
+                streamClosedByServer = true;
+                break;
+              }
+
+              fullMessage += payload;
+            }
+
+            aiStream.bubble.innerHTML = renderMarkdown(fullMessage);
+            scrollToBottom();
+
+            if (streamClosedByServer) {
+              break;
+            }
+          }
+
+          pendingChunk += decoder.decode();
+          const finalPayload = parseSseEvent(pendingChunk.replace(/\r\n/g, "\n"));
+          if (finalPayload && finalPayload !== "[DONE]") {
+            fullMessage += finalPayload;
+          }
+
+          if (!fullMessage.trim()) {
+            aiStream.bubble.innerHTML = renderMarkdown("（AI 未返回内容）");
+          } else {
+            aiStream.bubble.innerHTML = renderMarkdown(fullMessage);
+          }
+
+          if (streamClosedByServer) {
+            try {
+              reader.releaseLock();
+            } catch (releaseError) {
+              console.warn("释放 reader 失败:", releaseError);
+            }
+          }
+          scrollToBottom();
+          hljs.highlightAll();
+        } catch (error) {
+          hideThinking();
+          createBubble("ai", "网络连接异常，请检查后端服务");
+          console.error("Ask API 请求失败:", error);
+        } finally {
+          sending = false;
+          sendButton.disabled = false;
+          messageInput.focus();
+          scrollToBottom();
+        }
+      }
+
+      sendButton.addEventListener("click", sendMessage);
+
+      messageInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          sendMessage();
+        }
+      });
+
+      messageInput.addEventListener("input", resizeInput);
+
+      window.addEventListener("load", () => {
+        resizeInput();
+        scrollToBottom();
+        messageInput.focus();
+      });
+    </script>
+  </body>
+</html>
