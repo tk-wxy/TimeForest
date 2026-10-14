@@ -1,9 +1,10 @@
 <script setup>
 import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "../stores/auth.js";
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
 
 const username = ref("");
@@ -30,7 +31,12 @@ async function handleRegister() {
   loading.value = true;
   try {
     await auth.register(username.value.trim(), email.value.trim(), password.value);
-    router.push("/chat");
+    const redirect = route.query.redirect;
+    router.push(
+      redirect && typeof redirect === "string" && redirect !== "/login" && redirect !== "/register"
+        ? redirect
+        : "/chat"
+    );
   } catch (e) {
     error.value = e?.response?.data?.error || "注册失败，请稍后重试";
   } finally {
@@ -106,7 +112,7 @@ async function handleRegister() {
 
       <p class="auth-switch">
         已有账号？
-        <RouterLink to="/login" class="auth-link">立即登录</RouterLink>
+        <RouterLink :to="{ path: '/login', query: { redirect: $route.query.redirect } }" class="auth-link">立即登录</RouterLink>
       </p>
       <p class="auth-switch">
         <RouterLink to="/" class="auth-link">← 返回首页</RouterLink>

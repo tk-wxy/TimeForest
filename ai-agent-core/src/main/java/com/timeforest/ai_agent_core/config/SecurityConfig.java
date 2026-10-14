@@ -48,6 +48,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/ingest").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/sites").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())

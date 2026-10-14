@@ -1,70 +1,70 @@
 /* ═══════════════════════════════════════════════════════
-   CSS 主题变量 — TimeForest
+   CSS 主题变量 — TimeForest（精致桉叶 / 鼠尾草绿）
    ═══════════════════════════════════════════════════════ */
 
-/* 默认 / 深色主题 */
+/* 默认 / 深色主题 —— 桉叶墨黑 + 鼠尾草绿点缀 */
 :root,
 [data-theme="dark"] {
-  --tf-bg:           #0e1209;
-  --tf-bg2:          #141a0f;
-  --tf-bg3:          #1a2314;
-  --tf-surface:      rgba(255,255,255,0.055);
-  --tf-surface2:     rgba(255,255,255,0.09);
-  --tf-border:       rgba(255,255,255,0.08);
-  --tf-border-a:     rgba(75,170,45,0.28);
+  --tf-bg:           #101312;
+  --tf-bg2:          #151917;
+  --tf-bg3:          #1c211e;
+  --tf-surface:      rgba(255,255,255,0.04);
+  --tf-surface2:     rgba(255,255,255,0.075);
+  --tf-border:       rgba(255,255,255,0.085);
+  --tf-border-a:     rgba(124,176,150,0.32);
 
-  --tf-text:         #edeae0;
-  --tf-text2:        rgba(210,207,198,0.72);
-  --tf-text3:        rgba(155,152,145,0.55);
-  --tf-text-danger:  rgba(240,130,100,0.9);
+  --tf-text:         #ecebe4;
+  --tf-text2:        rgba(223,221,212,0.64);
+  --tf-text3:        rgba(160,164,157,0.5);
+  --tf-text-danger:  #e0917a;
 
-  --tf-accent:       #52b836;
-  --tf-accent-dim:   rgba(82,184,54,0.14);
-  --tf-accent-text:  rgba(175,235,140,0.9);
+  --tf-accent:       #74ad92;
+  --tf-accent-dim:   rgba(116,173,146,0.13);
+  --tf-accent-text:  #a7d0bc;
 
-  --tf-bubble-ai:    rgba(255,255,255,0.065);
-  --tf-bubble-user:  #1c4e12;
-  --tf-user-text:    rgba(225,255,205,0.95);
+  --tf-bubble-ai:    rgba(255,255,255,0.05);
+  --tf-bubble-user:  #294e40;
+  --tf-user-text:    #e9f1ec;
 
-  --tf-sidebar:      #080d06;
-  --tf-dropdown:     #0e1509;
+  --tf-sidebar:      #0c0f0e;
+  --tf-dropdown:     #141816;
 
-  --tf-shadow:       rgba(0,0,0,0.45);
-  --tf-input-bg:     rgba(255,255,255,0.05);
-  --tf-placeholder:  rgba(160,158,150,0.38);
+  --tf-shadow:       rgba(0,0,0,0.5);
+  --tf-input-bg:     rgba(255,255,255,0.04);
+  --tf-placeholder:  rgba(160,164,157,0.4);
 
   color-scheme: dark;
 }
 
-/* 浅色主题 */
+/* 浅色主题 —— 暖纸白 + 深松林绿 */
 [data-theme="light"] {
-  --tf-bg:           #f0ece2;
-  --tf-bg2:          #e6e1d6;
-  --tf-bg3:          #ddd8cc;
-  --tf-surface:      rgba(255,255,255,0.88);
-  --tf-surface2:     rgba(255,255,255,0.98);
-  --tf-border:       rgba(0,0,0,0.09);
-  --tf-border-a:     rgba(40,115,20,0.28);
+  --tf-bg:           #f6f3ec;
+  --tf-bg2:          #efebe1;
+  --tf-bg3:          #e6e1d4;
+  --tf-surface:      rgba(255,255,255,0.9);
+  --tf-surface2:     #ffffff;
+  --tf-border:       rgba(40,48,42,0.1);
+  --tf-border-a:     rgba(58,107,84,0.3);
 
-  --tf-text:         #1a2015;
-  --tf-text2:        #4a5640;
-  --tf-text3:        #8a9880;
-  --tf-text-danger:  #c0402a;
+  --tf-text:         #20251f;
+  --tf-text2:        #515a4e;
+  --tf-text3:        #8b9283;
+  --tf-text-danger:  #b5482f;
 
-  --tf-accent:       #2d7822;
-  --tf-accent-dim:   rgba(45,120,34,0.1);
-  --tf-accent-text:  #1a5012;
+  --tf-accent:       #3a6b54;
+  --tf-accent-dim:   rgba(58,107,84,0.1);
+  --tf-accent-text:  #2c5240;
 
-  --tf-bubble-ai:    rgba(255,255,255,0.95);
-  --tf-bubble-user:  #1e5514;
+  --tf-bubble-ai:    #ffffff;
+  --tf-bubble-user:  #2e5d47;
   --tf-user-text:    #ffffff;
 
-  --tf-sidebar:      #f8f4ea;
+  --tf-sidebar:      #faf8f2;
   --tf-dropdown:     #ffffff;
 
-  --tf-shadow:       rgba(0,0,0,0.12);
-  --tf-input-bg:     rgba(0,0,0,0.04);
-  --tf-placeholder:  rgba(80,95,70,0.38);
+  --tf-shadow:       rgba(40,45,38,0.1);
+  --tf-input-bg:     rgba(40,48,42,0.04);
+  --tf-placeholder:  rgba(90,100,88,0.4);
 
   color-scheme: light;
 }

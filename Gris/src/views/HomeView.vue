@@ -8,7 +8,21 @@ function goToChat() {
   if (auth.isLoggedIn) {
     router.push("/chat");
   } else {
-    router.push("/login");
+    router.push({ path: "/login", query: { redirect: "/chat" } });
+  }
+}
+function goToBlogs() {
+  if (auth.isLoggedIn) {
+    router.push("/blogs");
+  } else {
+    router.push({ path: "/login", query: { redirect: "/blogs" } });
+  }
+}
+function goToSites() {
+  if (auth.isLoggedIn) {
+    router.push("/sites");
+  } else {
+    router.push({ path: "/login", query: { redirect: "/sites" } });
   }
 }
 </script>
@@ -43,11 +57,11 @@ function goToChat() {
           <i class="fa-regular fa-comment-dots nav-icon"></i>
           <span class="nav-label">对话</span>
         </button>
-        <button class="nav-btn">
+<button class="nav-btn" @click="goToSites">
           <i class="fa-solid fa-seedling nav-icon"></i>
-          <span class="nav-label">林间笔记</span>
+          <span class="nav-label">米奇妙妙屋</span>
         </button>
-        <button class="nav-btn">
+        <button class="nav-btn" @click="goToBlogs">
           <i class="fa-solid fa-feather nav-icon"></i>
           <span class="nav-label">Blog</span>
         </button>
@@ -55,7 +69,7 @@ function goToChat() {
 
       <!-- Right: profile entry -->
       <button class="user-btn" aria-label="个人主页 / 登录"
-        @click="auth.isLoggedIn ? router.push('/profile') : router.push('/login')">
+        @click="auth.isLoggedIn ? router.push('/profile') : router.push({ path: '/login', query: { redirect: '/profile' } })">
         <span class="user-avatar" aria-hidden="true">
           <i class="fa-regular fa-user"></i>
         </span>

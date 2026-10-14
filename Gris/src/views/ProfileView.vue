@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth.js";
 import { api } from "../utils/api.js";
@@ -8,23 +8,51 @@ import { currentTheme, setTheme } from "../utils/theme.js";
 const router = useRouter();
 const auth = useAuthStore();
 
+const menuOpen = ref(false);
+function toggleMenu(e) { e.stopPropagation(); menuOpen.value = !menuOpen.value; }
+function closeMenu() { menuOpen.value = false; }
+onMounted(() => document.addEventListener("click", closeMenu));
+onUnmounted(() => document.removeEventListener("click", closeMenu));
+
 const profile = ref(null);
 const sessions = ref([]);
+const drafts = ref([]);
+const publishedBlogs = ref([]);
+const favorites = ref([]);
 const loading = ref(true);
 const activeTab = ref("overview");  // "overview" | "sessions" | "blog"
-const blogTab = ref("draft");       // "draft" | "published"
+const blogTab = ref("draft");       // "draft" | "published" | "favorite"
 
 onMounted(async () => {
   try {
-    const [me, sess] = await Promise.all([api.get("/users/me"), api.get("/sessions")]);
+    const [me, sess, d, p] = await Promise.all([
+      api.get("/users/me"),
+      api.get("/sessions"),
+      api.get("/blogs/mine", { params: { status: "draft" } }),
+      api.get("/blogs/mine", { params: { status: "published" } })
+    ]);
     profile.value = me.data;
     sessions.value = sess.data;
+    drafts.value = d.data || [];
+    publishedBlogs.value = p.data || [];
+    // 预加载收藏
+    await fetchFavorites();
   } catch (e) {
     console.error(e);
   } finally {
     loading.value = false;
   }
 });
+
+async function fetchFavorites() {
+  try {
+    const { data } = await api.get("/blogs/favorites");
+    favorites.value = data.items || [];
+  } catch (e) {
+    console.error("加载收藏失败", e);
+    favorites.value = [];
+  }
+}
 
 const joinedText = computed(() => {
   if (!profile.value?.createdAt) return "—";
@@ -33,6 +61,39 @@ const joinedText = computed(() => {
 });
 
 const initial = computed(() => (profile.value?.username || auth.username || "U")[0].toUpperCase());
+
+const blogCount = computed(() => drafts.value.length + publishedBlogs.value.length);
+
+function formatBlogDate(d) {
+  if (!d) return "";
+  return new Date(d).toLocaleDateString("zh-CN", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function truncate(s, len = 60) {
+  if (!s) return "";
+  return s.length > len ? s.slice(0, len) + "…" : s;
+}
+
+async function createDraft() {
+  try {
+    const { data } = await api.post("/blogs");
+    router.push(`/blog/editor/${data.id}`);
+  } catch {
+    alert("创建草稿失败");
+  }
+}
+
+async function deleteBlog(id) {
+  if (!confirm("确定删除这篇文章吗？此操作不可撤销。")) return;
+  try {
+    await api.delete(`/blogs/${id}`);
+    drafts.value = drafts.value.filter(b => b.id !== id);
+    publishedBlogs.value = publishedBlogs.value.filter(b => b.id !== id);
+    favorites.value = favorites.value.filter(b => b.id !== id);
+  } catch {
+    alert("删除失败，请重试");
+  }
+}
 
 async function deleteSession(id) {
   if (!confirm("删除此对话？")) return;
@@ -54,8 +115,8 @@ function logout() { auth.logout(); router.push("/login"); }
 
     <!-- ── Top bar ── -->
     <header class="topbar">
-      <button class="nav-btn" @click="router.back()">
-        <i class="fa-solid fa-arrow-left"></i> 返回
+      <button class="nav-btn logo-btn" @click="router.push('/')">
+        <i class="fa-solid fa-leaf"></i>
       </button>
       <span class="topbar-brand">
         <i class="fa-solid fa-leaf"></i> TimeForest
@@ -73,9 +134,27 @@ function logout() { auth.logout(); router.push("/login"); }
             <i class="fa-solid fa-sun"></i>
           </button>
         </div>
-        <button class="nav-btn accent" @click="router.push('/chat')">
-          <i class="fa-solid fa-leaf"></i> 对话
-        </button>
+        <div class="menu-wrap" @click.stop>
+          <button class="icon-btn" :class="{ active: menuOpen }" title="菜单" @click="toggleMenu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <transition name="drop">
+            <div v-if="menuOpen" class="dropdown" role="menu" @click.stop>
+              <button class="dd-item" @click="router.push('/'); menuOpen = false">
+                <i class="fa-solid fa-house"></i> 首页
+              </button>
+              <button class="dd-item" @click="router.push('/chat'); menuOpen = false">
+                <i class="fa-regular fa-comment-dots"></i> 对话
+              </button>
+              <button class="dd-item" @click="router.push('/sites'); menuOpen = false">
+                <i class="fa-solid fa-globe"></i> 网站
+              </button>
+              <button class="dd-item" @click="router.push('/blogs'); menuOpen = false">
+                <i class="fa-solid fa-feather"></i> 博客
+              </button>
+            </div>
+          </transition>
+        </div>
       </div>
     </header>
 
@@ -109,7 +188,7 @@ function logout() { auth.logout(); router.push("/login"); }
           </div>
           <div class="stat-div"></div>
           <div class="stat">
-            <span class="sn">0</span>
+            <span class="sn">{{ blogCount }}</span>
             <span class="sl">Blog</span>
           </div>
         </div>
@@ -145,9 +224,9 @@ function logout() { auth.logout(); router.push("/login"); }
                 <span class="action-text">管理角色</span>
                 <i class="fa-solid fa-chevron-right action-arrow"></i>
               </button>
-              <button class="action-row disabled" disabled>
+              <button class="action-row" @click="createDraft">
                 <span class="action-icon"><i class="fa-solid fa-feather-pointed"></i></span>
-                <span class="action-text">写篇文章 <em class="tag">即将上线</em></span>
+                <span class="action-text">写篇文章</span>
                 <i class="fa-solid fa-chevron-right action-arrow"></i>
               </button>
             </div>
@@ -220,7 +299,7 @@ function logout() { auth.logout(); router.push("/login"); }
         <div class="card">
           <div class="card-title-row">
             <span class="card-title"><i class="fa-solid fa-feather-pointed"></i> 林间记录</span>
-            <button class="btn-accent-sm" disabled title="功能即将上线">
+            <button class="btn-accent-sm" @click="createDraft">
               <i class="fa-solid fa-plus"></i> 写文章
             </button>
           </div>
@@ -228,24 +307,80 @@ function logout() { auth.logout(); router.push("/login"); }
           <!-- Blog sub-tabs -->
           <div class="blog-tabs">
             <button :class="['btab', blogTab==='draft'&&'on']" @click="blogTab='draft'">
-              草稿 <span class="cnt">0</span>
+              草稿 <span class="cnt">{{ drafts.length }}</span>
             </button>
             <button :class="['btab', blogTab==='published'&&'on']" @click="blogTab='published'">
-              已发布 <span class="cnt">0</span>
+              已发布 <span class="cnt">{{ publishedBlogs.length }}</span>
+            </button>
+            <button :class="['btab', blogTab==='favorite'&&'on']" @click="blogTab='favorite'">
+              <i class="fa-solid fa-star"></i> 收藏 <span class="cnt">{{ favorites.length }}</span>
             </button>
           </div>
 
-          <!-- Empty states -->
-          <div class="blog-empty">
-            <div class="blog-empty-icon">
-              <i :class="blogTab==='draft' ? 'fa-regular fa-file-lines' : 'fa-solid fa-book-open'"></i>
+          <!-- Drafts -->
+          <template v-if="blogTab === 'draft'">
+            <div v-if="!drafts.length" class="blog-empty">
+              <div class="blog-empty-icon"><i class="fa-regular fa-file-lines"></i></div>
+              <p class="blog-empty-title">还没有草稿</p>
+              <p class="blog-empty-sub">在森林里记录你的想法与灵感</p>
             </div>
-            <p class="blog-empty-title">{{ blogTab === 'draft' ? '还没有草稿' : '还没有发布的文章' }}</p>
-            <p class="blog-empty-sub">
-              {{ blogTab === 'draft' ? '在森林里记录你的想法与灵感' : '将草稿发布，与世界分享你的故事' }}
-            </p>
-            <div class="coming-tag"><i class="fa-solid fa-seedling"></i> 功能正在种植中，敬请期待</div>
-          </div>
+            <div v-for="b in drafts" :key="b.id" class="blog-item" @click="router.push(`/blog/editor/${b.id}`)">
+              <div class="blog-item-icon"><i class="fa-regular fa-file-lines"></i></div>
+              <div class="blog-item-info">
+                <span class="blog-item-title">{{ b.title || '无标题' }}</span>
+                <span class="blog-item-meta">{{ formatBlogDate(b.updatedAt || b.publishedAt) }}</span>
+              </div>
+              <button class="blog-item-del" title="删除" @click.stop="deleteBlog(b.id)">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </template>
+
+          <!-- Published -->
+          <template v-if="blogTab === 'published'">
+            <div v-if="!publishedBlogs.length" class="blog-empty">
+              <div class="blog-empty-icon"><i class="fa-solid fa-book-open"></i></div>
+              <p class="blog-empty-title">还没有发布的文章</p>
+              <p class="blog-empty-sub">将草稿发布，与世界分享你的故事</p>
+            </div>
+            <div v-for="b in publishedBlogs" :key="b.id" class="blog-item" @click="router.push(`/blog/${b.id}`)">
+              <div class="blog-item-icon"><i class="fa-solid fa-book-open"></i></div>
+              <div class="blog-item-info">
+                <span class="blog-item-title">{{ b.title || '无标题' }}</span>
+                <span class="blog-item-meta">{{ truncate(b.subtitle, 30) }} · {{ formatBlogDate(b.publishedAt) }}</span>
+              </div>
+              <div class="blog-item-stats">
+                <span><i class="fa-solid fa-eye"></i> {{ b.viewCount }}</span>
+                <span><i class="fa-solid fa-heart"></i> {{ b.likeCount }}</span>
+              </div>
+              <button class="blog-item-del" title="删除" @click.stop="deleteBlog(b.id)">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </template>
+
+          <!-- Favorites -->
+          <template v-if="blogTab === 'favorite'">
+            <div v-if="!favorites.length" class="blog-empty">
+              <div class="blog-empty-icon"><i class="fa-solid fa-star"></i></div>
+              <p class="blog-empty-title">还没有收藏的文章</p>
+              <p class="blog-empty-sub">去发现页收藏你喜欢的文章吧</p>
+            </div>
+            <div v-for="b in favorites" :key="b.id" class="blog-item" @click="router.push(`/blog/${b.id}`)">
+              <div class="blog-item-icon"><i class="fa-solid fa-star"></i></div>
+              <div class="blog-item-info">
+                <span class="blog-item-title">{{ b.title || '无标题' }}</span>
+                <span class="blog-item-meta">{{ truncate(b.subtitle, 30) }} · {{ b.authorName }} · {{ formatBlogDate(b.publishedAt) }}</span>
+              </div>
+              <div class="blog-item-stats">
+                <span><i class="fa-solid fa-eye"></i> {{ b.viewCount }}</span>
+                <span><i class="fa-solid fa-heart"></i> {{ b.likeCount }}</span>
+              </div>
+              <button class="blog-item-del" title="删除" @click.stop="deleteBlog(b.id)">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </template>
         </div>
       </section>
     </div>
@@ -316,6 +451,21 @@ function logout() { auth.logout(); router.push("/login"); }
 
 /* ════════════ Loading ════════════ */
 .loader { display: flex; justify-content: center; padding: 4rem; color: var(--tf-text3); font-size: 1.5rem; }
+
+/* ── Icon button ── */
+.icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--tf-border); background: var(--tf-surface); color: var(--tf-text2); cursor: pointer; display: grid; place-items: center; font-size: 0.82rem; flex-shrink: 0; transition: background 150ms, color 150ms, border-color 150ms; }
+.icon-btn:hover, .icon-btn.active { background: var(--tf-accent-dim); color: var(--tf-accent-text, var(--tf-accent)); border-color: var(--tf-border-a); }
+
+/* ── Menu ── */
+.menu-wrap { position: relative; flex-shrink: 0; }
+.dropdown { position: absolute; top: calc(100% + 8px); right: 0; min-width: 160px; background: var(--tf-dropdown); border: 1px solid var(--tf-border); border-radius: 14px; padding: 0.45rem; box-shadow: 0 16px 44px var(--tf-shadow); z-index: 600; }
+.dd-item { display: flex; align-items: center; gap: 0.7rem; width: 100%; padding: 0.52rem 0.75rem; border: none; background: none; color: var(--tf-text); font-size: 0.82rem; border-radius: 7px; cursor: pointer; text-align: left; transition: background 140ms, color 140ms; }
+.dd-item i { width: 14px; text-align: center; color: var(--tf-text3); }
+.dd-item:hover { background: var(--tf-accent-dim); }
+
+.drop-enter-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.drop-leave-active { transition: opacity 0.1s ease, transform 0.1s ease; }
+.drop-enter-from, .drop-leave-to { opacity: 0; transform: translateY(-6px) scale(0.97); }
 
 /* ════════════ Main content ════════════ */
 .main-content {
@@ -505,4 +655,43 @@ function logout() { auth.logout(); router.push("/login"); }
 .blog-empty-title { margin: 0; font-size: 1rem; font-weight: 600; color: var(--tf-text2); }
 .blog-empty-sub { margin: 0; font-size: 0.82rem; color: var(--tf-text3); max-width: 280px; }
 .coming-tag { display: flex; align-items: center; gap: 0.45rem; font-size: 0.75rem; color: var(--tf-accent); background: var(--tf-accent-dim); padding: 0.38rem 1rem; border-radius: 20px; border: 1px solid var(--tf-border-a); }
+
+.blog-item {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.65rem 0.5rem; border-radius: 10px;
+  border-bottom: 1px solid var(--tf-border);
+  cursor: pointer; transition: background 140ms;
+}
+.blog-item:last-child { border-bottom: none; }
+.blog-item:hover { background: var(--tf-accent-dim); }
+
+.blog-item-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: var(--tf-accent-dim); border: 1px solid var(--tf-border-a);
+  display: grid; place-items: center; font-size: 0.82rem;
+  color: var(--tf-accent-text, var(--tf-accent)); flex-shrink: 0;
+}
+
+.blog-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.blog-item-title {
+  font-size: 0.85rem; font-weight: 600; color: var(--tf-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.blog-item-meta { font-size: 0.72rem; color: var(--tf-text3); }
+
+.blog-item-stats {
+  display: flex; gap: 0.8rem; font-size: 0.72rem; color: var(--tf-text3); flex-shrink: 0;
+}
+.blog-item-stats span { display: flex; align-items: center; gap: 0.18rem; }
+
+.blog-item-arrow { color: var(--tf-text3); font-size: 0.65rem; flex-shrink: 0; }
+
+.blog-item-del {
+  width: 28px; height: 28px; border-radius: 6px;
+  border: 1px solid transparent; background: none;
+  color: var(--tf-text3); cursor: pointer;
+  display: grid; place-items: center; font-size: 0.7rem;
+  flex-shrink: 0; transition: all 0.15s;
+}
+.blog-item-del:hover { background: rgba(200,60,40,0.15); color: var(--tf-text-danger); border-color: rgba(200,60,40,0.3); }
 </style>
