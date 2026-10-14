@@ -1,38 +1,11 @@
 version: "3.9"
 
+# ═══════════════════════════════════════════
+# TimeForest 生产环境部署 (Ubuntu + 1Panel)
+# MySQL 与 Redis 由宿主机/1Panel 管理，此处不再定义
+# ═══════════════════════════════════════════
+
 services:
-
-  mysql:
-    image: mysql:8.0
-    container_name: tf-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-timeforest123}
-      MYSQL_DATABASE: timeforest
-    volumes:
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  redis:
-    image: redis:7-alpine
-    container_name: tf-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   backend:
     build:
@@ -40,21 +13,27 @@ services:
       dockerfile: Dockerfile
     container_name: tf-backend
     restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
+      # 激活生产配置
+      SPRING_PROFILES_ACTIVE: prod
+      # DeepSeek API
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_NAME: timeforest
-      DB_USER: root
+      # MySQL — 指向宿主机（1Panel 安装的 MySQL）
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-timeforest}
+      DB_USER: ${DB_USER:-root}
       DB_PASSWORD: ${DB_PASSWORD:-timeforest123}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      # Redis — 指向宿主机（1Panel 安装的 Redis）
+      REDIS_HOST: ${REDIS_HOST:-host.docker.internal}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      # JWT
       JWT_SECRET: ${JWT_SECRET:-timeforest-super-secret-key-please-change-in-production-min32chars}
+      # 生产环境 — 关闭调试日志和自动初始化
+      SPRING_JPA_SHOW_SQL: "false"
     ports:
       - "8080:8080"
 
@@ -68,7 +47,3 @@ services:
       - backend
     ports:
       - "80:80"
-
-volumes:
-  mysql_data:
-  redis_data:
