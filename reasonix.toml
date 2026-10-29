@@ -1,2 +1,0 @@
-[permissions]
-allow = ["Bash(git -C:*)", "Bash(reasonix --version 2>&1)", "Bash((Get-Command reasonix).Source 2>&1)", "Bash(reasonix --help 2>&1)", "Bash(ls \"$env:USERPROFILE\\.reasonix\" -ErrorAction SilentlyContinue; ls \"$env:USERPROFILE\\reasonix.toml\" -ErrorAction SilentlyContinue; ls \"$env:LOCALAPPDATA\\reasonix\" -ErrorAction SilentlyContinue 2>&1)", "Bash(ls \"$env:LOCALAPPDATA\\reasonix\\environment\" -Recurse 2>&1)", "Bash(reasonix serve 2>&1)"]
